@@ -1,0 +1,1 @@
+# kubeatlas-rules
