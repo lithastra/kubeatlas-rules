@@ -1,0 +1,25 @@
+# Real OpenShift Route — exercise the rule's primary + alternate
+# backend paths in one fixture so `kubeatlas rules-test` covers
+# both with a single sample. Modeled on the standard PetClinic
+# blue/green deployment pattern OpenShift docs use.
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: petclinic
+  namespace: petclinic
+spec:
+  host: petclinic.apps.cluster.example.com
+  to:
+    kind: Service
+    name: petclinic
+    weight: 80
+  alternateBackends:
+    - kind: Service
+      name: petclinic-canary
+      weight: 20
+  port:
+    targetPort: http
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect
+  wildcardPolicy: None
