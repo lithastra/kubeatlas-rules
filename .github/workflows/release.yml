@@ -1,0 +1,77 @@
+name: Release
+
+# Tag-driven OCI publish. Tags follow the <pack>/v<version> layout
+# (e.g. openshift/v0.1.0). The job parses the pack name out of the
+# tag, packages that directory, and pushes to
+# ghcr.io/lithastra/rules/<pack>:<version>.
+#
+# Tag input is read into an env var (GH_REF) and parsed in shell —
+# never interpolated into a `run:` line. github.actor is similarly
+# routed through env: GH_ACTOR. No untrusted GitHub event payload
+# fields (commit messages, PR titles) appear here.
+
+on:
+  push:
+    tags:
+      - '*/v*'
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  publish:
+    name: Push pack to ghcr.io
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Parse pack and version from tag
+        id: parse
+        env:
+          GH_REF: ${{ github.ref }}
+        run: |
+          set -e
+          tag="${GH_REF#refs/tags/}"
+          pack="${tag%%/*}"
+          version="${tag#*/v}"
+          if [ -z "$pack" ] || [ -z "$version" ] || [ "$pack" = "$tag" ]; then
+            echo "::error::Tag '$tag' does not match <pack>/v<version>"
+            exit 1
+          fi
+          if [ ! -d "$pack" ]; then
+            echo "::error::Tag references pack '$pack' but no such directory"
+            exit 1
+          fi
+          echo "pack=$pack" >> "$GITHUB_OUTPUT"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "Resolved pack=$pack version=$version"
+
+      - name: Install ORAS
+        uses: oras-project/setup-oras@v1
+        with:
+          version: 1.2.0
+
+      - name: Log in to ghcr.io
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_ACTOR: ${{ github.actor }}
+        run: |
+          echo "$GH_TOKEN" | oras login ghcr.io -u "$GH_ACTOR" --password-stdin
+
+      - name: Pack + push artifact
+        env:
+          PACK: ${{ steps.parse.outputs.pack }}
+          VERSION: ${{ steps.parse.outputs.version }}
+        run: |
+          set -e
+          cd "$PACK"
+          files=(metadata.yaml)
+          for f in *.rego; do
+            [ -f "$f" ] && files+=("$f")
+          done
+          echo "Pushing ghcr.io/lithastra/rules/${PACK}:${VERSION}"
+          oras push \
+            "ghcr.io/lithastra/rules/${PACK}:${VERSION}" \
+            --artifact-type "application/vnd.kubeatlas.rulepack.v1+yaml" \
+            "${files[@]}"
