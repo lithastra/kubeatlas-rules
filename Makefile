@@ -32,13 +32,20 @@ endif
 help: ## Show this help.
 	@awk -F':.*##' '/^[a-zA-Z_-]+:.*##/ {printf "  %-15s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
 
+# --ignore '*.yaml' keeps OPA from loading metadata.yaml and the
+# samples/*.yaml CRD fixtures as Rego data — both live in pack
+# directories on purpose but neither is a Rego data source. Without
+# the ignore, `opa test` walks them and emits "conflicting rule" /
+# unhelpful data clashes.
+OPA_IGNORE_FLAGS := --ignore '*.yaml' --ignore '*.yml'
+
 check: ## opa check: syntax + reference validation.
 	@if [ -z "$(PACK_DIRS)" ]; then \
 	  echo "no packs found"; exit 0; \
 	fi; \
 	for d in $(PACK_DIRS); do \
 	  echo "==> opa check $$d"; \
-	  $(OPA) check $$d || exit $$?; \
+	  $(OPA) check $(OPA_IGNORE_FLAGS) $$d || exit $$?; \
 	done
 
 test: ## opa test: per-pack unit tests under tests/.
@@ -47,7 +54,7 @@ test: ## opa test: per-pack unit tests under tests/.
 	fi; \
 	for d in $(PACK_DIRS); do \
 	  echo "==> opa test $$d"; \
-	  $(OPA) test $$d || exit $$?; \
+	  $(OPA) test $(OPA_IGNORE_FLAGS) $$d || exit $$?; \
 	done
 
 integration: ## kubeatlas rules-test: load + evaluate against samples/.

@@ -1,0 +1,10 @@
+# Real CRD instance the integration test loads through the
+# KubeAtlas engine via `kubeatlas rules-test`. The `make integration`
+# target asserts the sample pack derives at least one edge from this.
+apiVersion: example.com/v1
+kind: SampleResource
+metadata:
+  name: example
+  namespace: demo
+spec:
+  targetName: example-target

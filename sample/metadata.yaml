@@ -1,0 +1,21 @@
+name: sample
+version: 0.1.0
+rego_api: v1
+kubeatlas: ">= 1.0.0"
+description: |
+  Reference rule pack used as a template for new packs and as the
+  smoke-test fixture for the catalogue's CI gates. Derives a
+  SAMPLE_DERIVED edge from any SampleResource (example.com/v1) to
+  a SampleTarget in the same namespace.
+
+  Real packs (openshift/, cert-manager/, …) follow exactly this
+  layout; copy this directory and rename to start a new one.
+maintainers:
+  - "@kubeatlas-maintainers"
+modules:
+  - name: derive
+    file: derive.rego
+    entrypoint: data.kubeatlas.sample.derive
+    match:
+      group: example.com
+      kind: SampleResource

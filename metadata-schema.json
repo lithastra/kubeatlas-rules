@@ -1,0 +1,85 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kubeatlas.lithastra.com/schemas/rule-pack-metadata-v1.json",
+  "title": "KubeAtlas rule pack metadata (rego_api v1)",
+  "description": "Schema every metadata.yaml in this catalogue must satisfy. The KubeAtlas binary's loader (pkg/extractor/rego/loader.go) enforces the same fields; this JSON Schema is what the offline metadata-validator checks before a PR lands.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["name", "version", "rego_api", "kubeatlas", "modules"],
+  "properties": {
+    "name": {
+      "description": "Pack name. Lowercase, hyphenated. Must match the directory name + the OCI repository tail (ghcr.io/lithastra/rules/<name>).",
+      "type": "string",
+      "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$",
+      "minLength": 1,
+      "maxLength": 63
+    },
+    "version": {
+      "description": "Pack semver. Tag for OCI release is <name>/v<version>.",
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+(-[0-9A-Za-z.-]+)?(\\+[0-9A-Za-z.-]+)?$"
+    },
+    "rego_api": {
+      "description": "KubeAtlas Rego interface contract version. v1 is the only value the engine currently supports.",
+      "type": "string",
+      "enum": ["v1"]
+    },
+    "kubeatlas": {
+      "description": "Semver constraint against the running KubeAtlas binary. Examples: '>= 1.0.0', '>= 1.2.0, < 2.0.0'.",
+      "type": "string",
+      "minLength": 1
+    },
+    "description": {
+      "type": "string"
+    },
+    "maintainers": {
+      "description": "GitHub handles of pack stewards. Optional; falls back to MAINTAINERS.md when empty.",
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^@[A-Za-z0-9-]+$"
+      }
+    },
+    "modules": {
+      "description": "Each module is one .rego file with a declared GVK match. Engine routes per-resource events to modules whose match covers the resource's (group, kind).",
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "file", "entrypoint", "match"],
+        "properties": {
+          "name": {
+            "description": "Module identifier within the pack. Lowercase, hyphenated.",
+            "type": "string",
+            "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$"
+          },
+          "file": {
+            "description": "Path to the .rego file relative to the pack root.",
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]+\\.rego$"
+          },
+          "entrypoint": {
+            "description": "Fully-qualified Rego query the engine evaluates. Convention: data.kubeatlas.<pack>.<module>.derive.",
+            "type": "string",
+            "pattern": "^data\\.[a-z0-9_]+(\\.[a-z0-9_]+)*$"
+          },
+          "match": {
+            "description": "GVK narrowing: empty group + empty kind means catch-all. Engine matches by Group + Kind only; Version variation is handled inside the rule.",
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["group", "kind"],
+            "properties": {
+              "group": {
+                "type": "string"
+              },
+              "kind": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

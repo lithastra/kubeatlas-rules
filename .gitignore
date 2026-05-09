@@ -11,6 +11,9 @@
 # Test binary, built with `go test -c`
 *.test
 
+# Locally built validate-metadata binary; CI builds it on demand.
+tools/validate-metadata/validate-metadata
+
 # Code coverage profiles and other test artifacts
 *.out
 coverage.*
