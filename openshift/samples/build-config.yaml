@@ -1,0 +1,25 @@
+apiVersion: build.openshift.io/v1
+kind: BuildConfig
+metadata:
+  name: petclinic
+  namespace: petclinic
+spec:
+  source:
+    type: Git
+    git:
+      uri: https://github.com/spring-projects/spring-petclinic.git
+      ref: main
+  strategy:
+    type: Source
+    sourceStrategy:
+      from:
+        kind: ImageStreamTag
+        name: java:openjdk-17-ubi9
+        namespace: openshift
+  output:
+    to:
+      kind: ImageStreamTag
+      name: petclinic:latest
+  triggers:
+    - type: ConfigChange
+    - type: ImageChange
