@@ -1,0 +1,28 @@
+# Real cert-manager Certificate using a ClusterIssuer (the typical
+# Let's Encrypt setup). One sample exercises BOTH the certificate
+# and issuer modules: rules-test should report 2 edges (STORES_IN
+# to the Secret + ISSUED_BY to the ClusterIssuer).
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: example-com-tls
+  namespace: web
+spec:
+  secretName: example-com-tls
+  duration: 2160h            # 90 days, matches Let's Encrypt
+  renewBefore: 360h          # renew 15 days before expiry
+  commonName: example.com
+  dnsNames:
+    - example.com
+    - www.example.com
+  issuerRef:
+    kind: ClusterIssuer
+    name: letsencrypt-prod
+    group: cert-manager.io
+  privateKey:
+    algorithm: ECDSA
+    encoding: PKCS1
+    size: 256
+  usages:
+    - server auth
+    - client auth

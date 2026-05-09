@@ -1,0 +1,35 @@
+name: cert-manager
+version: 0.1.0
+rego_api: v1
+kubeatlas: ">= 1.0.0"
+description: |
+  cert-manager.io/v1 Certificate edges. Two modules both match
+  Certificate but produce different edge types: STORES_IN points
+  at the Secret holding the issued cert, ISSUED_BY points at the
+  Issuer (namespaced) or ClusterIssuer (cluster-scoped) that
+  signed it.
+
+  Unlike the openshift pack, cert-manager is NOT auto-detected /
+  embedded. Operators opt in via Helm:
+
+      rulePacks:
+        extras:
+          - oci://ghcr.io/lithastra/rules/cert-manager:0.1.0
+
+  The pack ships only as an OCI artifact; nothing in the kubeatlas
+  binary references it.
+maintainers:
+  - "@kubeatlas-maintainers"
+modules:
+  - name: certificate
+    file: certificate.rego
+    entrypoint: data.kubeatlas.rules.cert_manager.certificate.derive
+    match:
+      group: cert-manager.io
+      kind: Certificate
+  - name: issuer
+    file: issuer.rego
+    entrypoint: data.kubeatlas.rules.cert_manager.issuer.derive
+    match:
+      group: cert-manager.io
+      kind: Certificate
