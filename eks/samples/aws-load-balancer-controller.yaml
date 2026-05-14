@@ -1,0 +1,26 @@
+# Real TargetGroupBinding emitted by AWS Load Balancer Controller
+# when an IngressGroup is reconciled against an EKS ALB. The
+# AWS-side Target Group ARN is carried as metadata; the rule emits
+# one ROUTES_TO edge from this binding to the petclinic Service
+# living in the same namespace.
+#
+# Notes for fixture readers:
+#   * spec.targetGroupARN is intentionally a fake-looking ARN —
+#     the rule never resolves ARNs through aws-sdk-go (invariant
+#     2.7); the field is metadata-only as far as KubeAtlas cares.
+#   * spec.targetType is "ip" because LBC's default for EKS is
+#     IP targeting; "instance" works the same way for this rule.
+#   * No spec.serviceRef.namespace field exists on the CRD type —
+#     the referenced Service must live in the binding's namespace.
+apiVersion: elbv2.k8s.aws/v1beta1
+kind: TargetGroupBinding
+metadata:
+  name: petclinic
+  namespace: petclinic
+spec:
+  serviceRef:
+    name: petclinic
+    port: 80
+  targetGroupARN: arn:aws:elasticloadbalancing:us-east-1:123456789012:targetgroup/petclinic/abc123def456ghij
+  targetType: ip
+  ipAddressType: ipv4

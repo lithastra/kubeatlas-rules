@@ -1,0 +1,49 @@
+name: eks
+version: 0.1.0
+rego_api: v1
+kubeatlas: ">= 1.1.0"
+description: |
+  EKS managed-K8s platform add-on CRDs. Models K8s resources that EKS
+  add-ons (AWS Load Balancer Controller, VPC CNI, Karpenter, EKS Pod
+  Identity Agent) inject into the cluster.
+
+  This pack does NOT model AWS cloud resources (S3, RDS, IAM Role,
+  SQS, SNS, Lambda, etc.). Those describe cloud infrastructure rather
+  than the K8s cluster itself, and are explicitly out of scope —
+  KubeAtlas reflects the K8s view of a cluster, not the cloud-control-
+  plane view. See Phase 3 doc invariant 2.3 + anti-pattern 51b for
+  the reasoning trail.
+
+  Like cert-manager, this pack is NOT auto-detected / embedded.
+  Operators opt in via Helm:
+
+      rulePacks:
+        eks: true
+
+  Anti-pattern reminders for future contributors (see Phase 3
+  invariant 2.3 — platform add-on packs are opt-in, never
+  auto-loaded; and 51b — cloud-resource wrapper CRDs are out of
+  scope):
+    * never write rules that read AWS region, account ID, or ARN
+      semantics; ARNs may be carried as metadata properties on a
+      node but never resolved through aws-sdk-go (invariant 2.7).
+    * never emit "guess" edges — only relationships ACK / Crossplane
+      / Karpenter spec fields spell out are graph-worthy.
+    * never put IRSA (ServiceAccount annotation
+      eks.amazonaws.com/role-arn) handling in this rego pack —
+      that's a built-in extractor (pkg/extractor/eks_identity.go,
+      P3-T23 / F-209) because IRSA is plain SA metadata, not an
+      add-on-injected CRD.
+
+  P3R-T1 lands the scaffold + aws-load-balancer-controller module.
+  The vpc-cni / karpenter / pod-identity modules arrive in P3R-T2
+  (one PR per module).
+maintainers:
+  - "@kubeatlas-maintainers"
+modules:
+  - name: aws-load-balancer-controller
+    file: aws-load-balancer-controller.rego
+    entrypoint: data.kubeatlas.rules.eks.aws_load_balancer_controller.derive
+    match:
+      group: elbv2.k8s.aws
+      kind: TargetGroupBinding
