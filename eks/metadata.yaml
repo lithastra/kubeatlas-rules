@@ -36,8 +36,19 @@ description: |
       add-on-injected CRD.
 
   P3R-T1 lands the scaffold + aws-load-balancer-controller module.
-  The vpc-cni / karpenter / pod-identity modules arrive in P3R-T2
-  (one PR per module).
+  P3R-T2 adds remaining modules one PR at a time:
+    * karpenter (NodePool -> EC2NodeClass)
+    * pod-identity (PodIdentityAssociation -> ServiceAccount) — this commit
+  Two sub-steps from the Phase 3 doc are deliberately skipped:
+    * IngressClassParams: the natural edge is IngressClass ->
+      IngressClassParams, but IngressClass is a built-in K8s
+      resource (networking.k8s.io/v1) — that belongs in the
+      main repo's pkg/extractor, not in a rego pack matching
+      kind=IngressClassParams (which has no outbound refs).
+    * vpc-cni / ENIConfig: spec fields are AWS subnet + SG IDs
+      (cloud resources, out of scope per invariant 51b). CRD
+      auto-discovery (Phase 2 F-103) already creates the node;
+      a no-op rego module adds nothing.
 maintainers:
   - "@kubeatlas-maintainers"
 modules:
@@ -47,3 +58,15 @@ modules:
     match:
       group: elbv2.k8s.aws
       kind: TargetGroupBinding
+  - name: karpenter
+    file: karpenter.rego
+    entrypoint: data.kubeatlas.rules.eks.karpenter.derive
+    match:
+      group: karpenter.sh
+      kind: NodePool
+  - name: pod-identity
+    file: pod-identity.rego
+    entrypoint: data.kubeatlas.rules.eks.pod_identity.derive
+    match:
+      group: eks.amazonaws.com
+      kind: PodIdentityAssociation

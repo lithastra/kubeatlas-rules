@@ -1,0 +1,27 @@
+# Real EKS Pod Identity association binding the petclinic
+# ServiceAccount to an IAM Role. The rule emits one
+# BINDS_PLATFORM_IDENTITY edge from this PodIdentityAssociation to
+# the petclinic SA in the petclinic namespace.
+#
+# Notes for fixture readers:
+#   * The CR is cluster-scoped (no metadata.namespace) but
+#     spec.namespace + spec.serviceAccount name the SA the binding
+#     applies to.
+#   * spec.roleARN is included for realism but the rule never
+#     resolves it through aws-sdk-go (invariant 2.7); the ARN is
+#     metadata-only as far as KubeAtlas cares. A future
+#     ExternalIdentity virtual node carrying this ARN may be
+#     emitted by the main repo's F-209 built-in extractor
+#     (pkg/extractor/eks_identity.go, P3-T23).
+apiVersion: eks.amazonaws.com/v1alpha1
+kind: PodIdentityAssociation
+metadata:
+  name: petclinic-pod-identity
+spec:
+  clusterName: petclinic-prod
+  namespace: petclinic
+  serviceAccount: petclinic
+  roleARN: arn:aws:iam::123456789012:role/petclinic-pod-role
+  tags:
+    Environment: prod
+    Application: petclinic
