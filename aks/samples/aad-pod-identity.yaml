@@ -1,0 +1,24 @@
+# A real AAD Pod Identity binding for the petclinic workload on AKS.
+#
+# The aad-pod-identity rule fires on this AzureIdentityBinding and
+# emits one BINDS_PLATFORM_IDENTITY edge to the AzureIdentity named
+# in spec.azureIdentity ("petclinic-identity", in the same
+# namespace).
+#
+# Notes for fixture readers:
+#   * Samples are single-document — the engine evaluates one
+#     resource per file. The AzureIdentity this binding references
+#     is a separate object in a real cluster; it carries a
+#     spec.resourceID pointing at an Azure Managed Identity (a cloud
+#     resource KubeAtlas never resolves — invariant 2.7).
+#   * spec.selector is the pod label value (`aadpodidbinding`)
+#     classic AAD Pod Identity uses to bind to pods. That label
+#     match is not a rego concern — see aad-pod-identity.rego.
+apiVersion: aadpodidentity.k8s.io/v1
+kind: AzureIdentityBinding
+metadata:
+  name: petclinic-binding
+  namespace: petclinic
+spec:
+  azureIdentity: petclinic-identity
+  selector: petclinic

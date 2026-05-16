@@ -1,0 +1,64 @@
+name: aks
+version: 0.1.0
+rego_api: v1
+kubeatlas: ">= 1.1.0"
+description: |
+  AKS managed-K8s platform add-on CRDs. Models the K8s resources
+  that AKS identity add-ons inject into the cluster.
+
+  Coverage:
+    * aad-pod-identity — AAD Pod Identity (aadpodidentity.k8s.io).
+      The older identity add-on, still widely deployed. An
+      AzureIdentityBinding references an AzureIdentity by name; the
+      module emits one BINDS_PLATFORM_IDENTITY edge per binding.
+    * workload-identity — PLACEHOLDER module, derives nothing.
+
+  Why workload-identity is a placeholder
+  --------------------------------------
+  AKS Workload Identity (the successor to AAD Pod Identity) has NO
+  add-on-injected CRD. A workload opts in purely through a
+  ServiceAccount annotation:
+
+      azure.workload.identity/client-id: <client-id>
+
+  A ServiceAccount annotation is plain SA metadata, not an
+  add-on CRD, so the SA -> ExternalIdentity edge belongs to a
+  built-in extractor — pkg/extractor/aks_identity.go (P3-T24 /
+  F-209) in the main repo — exactly as IRSA does for EKS. A rego
+  rule cannot resolve it anyway: the engine routes one resource at
+  a time and the binding is a label/annotation relationship.
+
+  The workload-identity module is kept (deriving the empty set) so
+  that `kubeatlas rules-test --pack=aks` lists every AKS-related
+  code entry point with a pointer to where the real logic lives.
+
+  This pack does NOT model Azure Service Operator (ASO) CRDs —
+  ResourceGroup / StorageAccount / SqlServer etc. Those are
+  cloud-resource wrapper CRDs describing Azure infrastructure, not
+  the K8s cluster itself, and are out of scope (Phase 3 doc
+  invariant 2.3 + revision v1.4).
+
+  Anti-pattern reminders for future contributors:
+    * never resolve AzureIdentity.spec.resourceID (the Azure
+      Managed Identity resource ID) into a graph node — it is a
+      cloud resource; carry it as a metadata property only
+      (invariant 2.7 + 51b).
+    * never put the Workload Identity SA-annotation handling into
+      this rego pack — that is the built-in extractor's job.
+    * never support AAD Pod Identity API versions older than
+      aadpodidentity.k8s.io/v1 — v1 is the stable API.
+maintainers:
+  - "@kubeatlas-maintainers"
+modules:
+  - name: aad-pod-identity
+    file: aad-pod-identity.rego
+    entrypoint: data.kubeatlas.rules.aks.aad_pod_identity.derive
+    match:
+      group: aadpodidentity.k8s.io
+      kind: AzureIdentityBinding
+  - name: workload-identity
+    file: workload-identity.rego
+    entrypoint: data.kubeatlas.rules.aks.workload_identity.derive
+    match:
+      group: ""
+      kind: ServiceAccount
