@@ -1,0 +1,17 @@
+# A Service that attaches a GKE BackendConfig through the
+# cloud.google.com/backend-config annotation. The gke-ingress rule
+# emits one USES_BACKEND_CONFIG edge: Service -> BackendConfig
+# "petclinic-bc" in the same namespace.
+apiVersion: v1
+kind: Service
+metadata:
+  name: petclinic
+  namespace: petclinic
+  annotations:
+    cloud.google.com/backend-config: '{"default":"petclinic-bc"}'
+spec:
+  selector:
+    app: petclinic
+  ports:
+    - port: 80
+      targetPort: 8080

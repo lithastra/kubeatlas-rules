@@ -1,0 +1,14 @@
+# A Multi-cluster Services ServiceImport — the ClusterSet-wide
+# handle for a service exported by other clusters. The mcs rule
+# emits one MCS_IMPORTS edge: ServiceImport -> Service petclinic
+# (the derived Service of the same namespace + name).
+apiVersion: multicluster.x-k8s.io/v1alpha1
+kind: ServiceImport
+metadata:
+  name: petclinic
+  namespace: petclinic
+spec:
+  type: ClusterSetIP
+  ports:
+    - port: 80
+      protocol: TCP

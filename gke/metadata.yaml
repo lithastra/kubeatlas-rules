@@ -1,0 +1,118 @@
+name: gke
+version: 0.1.0
+rego_api: v1
+kubeatlas: ">= 1.1.0"
+description: |
+  GKE managed-K8s platform add-on CRDs. Models the K8s resources
+  that GKE add-ons inject into the cluster.
+
+  Coverage:
+    * gke-ingress     — GKE Ingress: a Service's
+      cloud.google.com/backend-config annotation -> BackendConfig
+      (USES_BACKEND_CONFIG), and an Ingress's
+      networking.gke.io/v1beta1.FrontendConfig annotation ->
+      FrontendConfig (USES_FRONTEND_CONFIG).
+    * mcs             — Multi-cluster Services: ServiceExport ->
+      Service (MCS_EXPORTS) and ServiceImport -> Service
+      (MCS_IMPORTS), each by the same-namespace same-name MCS
+      convention.
+    * backup-for-gke  — Backup for GKE: BackupPlan -> the
+      namespaces / ProtectedApplications it selects (BACKS_UP), and
+      RestorePlan -> BackupPlan (RESTORES_FROM).
+    * fleet           — PLACEHOLDER. The Membership node is in the
+      graph via CRD discovery; the module derives nothing.
+
+  Module / file layout note (ADR)
+  -------------------------------
+  The KubeAtlas rego engine routes a resource to a module by an
+  exact (group, kind) match — there is no within-group wildcard.
+  Two of the concerns above span two kinds each:
+
+    * gke-ingress reads an annotation that lives on a Service
+      (group "") for BackendConfig, and on an Ingress
+      (networking.k8s.io) for FrontendConfig. Both edges have the
+      ANNOTATED resource as the `from` side, so each is soundly
+      derivable from that single resource — but they are different
+      GVKs.
+    * mcs handles ServiceExport and ServiceImport, two kinds in
+      multicluster.x-k8s.io.
+    * backup-for-gke handles BackupPlan and RestorePlan, two kinds
+      in gkebackup.gke.io.
+
+  Each of these is ONE .rego file with ONE `derive` entrypoint that
+  branches on input.kind, registered under TWO module entries with
+  distinct (group, kind) matches. The engine compiles each entry as
+  an independent prepared query, so sharing a file is safe. This
+  keeps the file/test layout at four modules (the P3R-T6 shape)
+  while routing precisely — no catch-all module that would evaluate
+  on every resource in the cluster.
+
+  Out of scope:
+    * Config Connector (cnrm.cloud.google.com) CRDs —
+      StorageBucket / SQLInstance / IAMServiceAccount etc. are
+      cloud-resource wrapper CRDs describing GCP infrastructure,
+      not the K8s cluster (invariant 2.3 + revision v1.4).
+    * GKE Workload Identity — opt-in is the ServiceAccount
+      annotation iam.gke.io/gcp-service-account, handled by the
+      built-in extractor pkg/extractor/gke_identity.go (P3-T25 /
+      F-209), never by this rego pack.
+
+  Anti-pattern reminders for future contributors:
+    * BackendConfig / FrontendConfig are GKE-shipped CRDs but work
+      on any cluster running the controller — rego match keys on
+      the API group, never on "is this GKE".
+    * never expand BackupPlan spec.backupConfig.allNamespaces=true
+      into a per-namespace edge fan-out — keep the BackupPlan node
+      with a "scope: all-namespaces" metadata marker instead.
+
+  Edge-type note: USES_BACKEND_CONFIG / USES_FRONTEND_CONFIG /
+  MCS_EXPORTS / MCS_IMPORTS / BACKS_UP / RESTORES_FROM are new edge
+  types not yet in pkg/graph/model.go AllEdgeTypes. The rules repo
+  may emit any EdgeType-typed string today; a main-repo follow-up
+  registers the consts and documents them (same path as the EKS
+  pack's USES_NODE_CLASS).
+maintainers:
+  - "@kubeatlas-maintainers"
+modules:
+  - name: gke-ingress-backend
+    file: gke-ingress.rego
+    entrypoint: data.kubeatlas.rules.gke.gke_ingress.derive
+    match:
+      group: ""
+      kind: Service
+  - name: gke-ingress-frontend
+    file: gke-ingress.rego
+    entrypoint: data.kubeatlas.rules.gke.gke_ingress.derive
+    match:
+      group: networking.k8s.io
+      kind: Ingress
+  - name: mcs-exports
+    file: mcs.rego
+    entrypoint: data.kubeatlas.rules.gke.mcs.derive
+    match:
+      group: multicluster.x-k8s.io
+      kind: ServiceExport
+  - name: mcs-imports
+    file: mcs.rego
+    entrypoint: data.kubeatlas.rules.gke.mcs.derive
+    match:
+      group: multicluster.x-k8s.io
+      kind: ServiceImport
+  - name: backup-for-gke-plan
+    file: backup-for-gke.rego
+    entrypoint: data.kubeatlas.rules.gke.backup_for_gke.derive
+    match:
+      group: gkebackup.gke.io
+      kind: BackupPlan
+  - name: backup-for-gke-restore
+    file: backup-for-gke.rego
+    entrypoint: data.kubeatlas.rules.gke.backup_for_gke.derive
+    match:
+      group: gkebackup.gke.io
+      kind: RestorePlan
+  - name: fleet
+    file: fleet.rego
+    entrypoint: data.kubeatlas.rules.gke.fleet.derive
+    match:
+      group: hub.gke.io
+      kind: Membership

@@ -1,0 +1,13 @@
+# A Backup for GKE BackupPlan scoped to two explicit namespaces.
+# The backup-for-gke rule emits one BACKS_UP edge per namespace:
+# BackupPlan -> Namespace petclinic, BackupPlan -> Namespace payments.
+apiVersion: gkebackup.gke.io/v1
+kind: BackupPlan
+metadata:
+  name: nightly
+spec:
+  backupConfig:
+    selectedNamespaces:
+      namespaces:
+        - petclinic
+        - payments

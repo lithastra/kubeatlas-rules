@@ -1,0 +1,8 @@
+# A Multi-cluster Services ServiceExport. MCS keys the export on the
+# same namespace + name as the Service it exports, so the mcs rule
+# emits one MCS_EXPORTS edge: ServiceExport -> Service petclinic.
+apiVersion: multicluster.x-k8s.io/v1alpha1
+kind: ServiceExport
+metadata:
+  name: petclinic
+  namespace: petclinic

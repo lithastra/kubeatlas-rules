@@ -1,0 +1,22 @@
+# An Ingress that attaches a GKE FrontendConfig through the
+# networking.gke.io/v1beta1.FrontendConfig annotation. The
+# gke-ingress rule emits one USES_FRONTEND_CONFIG edge:
+# Ingress -> FrontendConfig "petclinic-fc" in the same namespace.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: petclinic
+  namespace: petclinic
+  annotations:
+    networking.gke.io/v1beta1.FrontendConfig: petclinic-fc
+spec:
+  rules:
+    - http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: petclinic
+                port:
+                  number: 80

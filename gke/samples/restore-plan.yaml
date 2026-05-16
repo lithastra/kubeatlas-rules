@@ -1,0 +1,8 @@
+# A Backup for GKE RestorePlan. The backup-for-gke rule emits one
+# RESTORES_FROM edge: RestorePlan -> BackupPlan "nightly".
+apiVersion: gkebackup.gke.io/v1
+kind: RestorePlan
+metadata:
+  name: dr-restore
+spec:
+  backupPlan: nightly
