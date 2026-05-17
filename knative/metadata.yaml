@@ -1,0 +1,55 @@
+name: knative
+version: 0.1.0
+rego_api: v1
+kubeatlas: ">= 1.1.0"
+description: |
+  Knative Serving CRDs. Models the Service -> Configuration ->
+  Revision generation chain the serving.knative.io API group adds.
+
+  Coverage:
+    * service — one module over two kinds:
+        - Service:       Service -> the same-named Configuration
+                         (CREATES_CONFIGURATION).
+        - Configuration: Configuration -> Revision, named by
+                         status.latestCreatedRevisionName and
+                         status.latestReadyRevisionName
+                         (CREATES_REVISION).
+
+  Module layout note (ADR)
+  ------------------------
+  The chain spans two kinds — Service and Configuration. Each edge
+  is soundly derivable from a single resource: Knative names a
+  Service's Configuration after the Service, and a Configuration's
+  status names its current Revisions. So service.rego is ONE file
+  with ONE derive entrypoint that branches on input.kind, registered
+  under two (group, kind) matches. The engine compiles each entry as
+  an independent prepared query, so sharing the file is safe.
+
+  Kubernetes ownerReferences already yield the generic OWNS edges
+  down the same chain; the CREATES_CONFIGURATION / CREATES_REVISION
+  edges name it in Knative's own terms.
+
+  Out of scope:
+    * Route and DomainMapping traffic targets — a Route splits
+      traffic across many Revisions by percentage; modelling the
+      split faithfully is a follow-up, not v0.1.
+    * Knative Eventing (Source, Trigger, Broker, Channel).
+
+  Edge-type note: CREATES_CONFIGURATION and CREATES_REVISION are new
+  EdgeType strings. The rules repo may emit any EdgeType-typed
+  string today; a main-repo follow-up registers the consts.
+maintainers:
+  - "@kubeatlas-maintainers"
+modules:
+  - name: service
+    file: service.rego
+    entrypoint: data.kubeatlas.rules.knative.service.derive
+    match:
+      group: serving.knative.io
+      kind: Service
+  - name: configuration
+    file: service.rego
+    entrypoint: data.kubeatlas.rules.knative.service.derive
+    match:
+      group: serving.knative.io
+      kind: Configuration

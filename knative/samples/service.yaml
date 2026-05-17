@@ -1,0 +1,12 @@
+# A Knative Service. The service rule emits one CREATES_CONFIGURATION
+# edge to the same-named Configuration that Knative provisions.
+apiVersion: serving.knative.io/v1
+kind: Service
+metadata:
+  name: helloworld
+  namespace: default
+spec:
+  template:
+    spec:
+      containers:
+        - image: gcr.io/knative-samples/helloworld-go

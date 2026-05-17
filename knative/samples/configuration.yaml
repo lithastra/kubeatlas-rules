@@ -1,0 +1,16 @@
+# A Knative Configuration whose status names its latest created and
+# latest ready Revisions. The service rule emits one CREATES_REVISION
+# edge per distinct Revision name — here two.
+apiVersion: serving.knative.io/v1
+kind: Configuration
+metadata:
+  name: helloworld
+  namespace: default
+spec:
+  template:
+    spec:
+      containers:
+        - image: gcr.io/knative-samples/helloworld-go
+status:
+  latestCreatedRevisionName: helloworld-00002
+  latestReadyRevisionName: helloworld-00001
