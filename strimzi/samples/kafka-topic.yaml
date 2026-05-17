@@ -1,0 +1,15 @@
+# A Strimzi KafkaTopic. The strimzi.io/cluster label assigns it to
+# the my-cluster Kafka cluster, so the kafka-topic rule emits one
+# BELONGS_TO_CLUSTER edge: KafkaTopic -> Kafka my-cluster.
+apiVersion: kafka.strimzi.io/v1beta2
+kind: KafkaTopic
+metadata:
+  name: orders
+  namespace: kafka
+  labels:
+    strimzi.io/cluster: my-cluster
+spec:
+  partitions: 3
+  replicas: 3
+  config:
+    retention.ms: 604800000

@@ -1,0 +1,21 @@
+# A Strimzi KafkaUser. The strimzi.io/cluster label assigns it to
+# the my-cluster Kafka cluster, so the kafka-user rule emits one
+# BELONGS_TO_CLUSTER edge: KafkaUser -> Kafka my-cluster.
+apiVersion: kafka.strimzi.io/v1beta2
+kind: KafkaUser
+metadata:
+  name: orders-consumer
+  namespace: kafka
+  labels:
+    strimzi.io/cluster: my-cluster
+spec:
+  authentication:
+    type: tls
+  authorization:
+    type: simple
+    acls:
+      - resource:
+          type: topic
+          name: orders
+        operations:
+          - Read

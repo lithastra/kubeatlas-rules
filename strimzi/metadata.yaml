@@ -1,0 +1,55 @@
+name: strimzi
+version: 0.1.0
+rego_api: v1
+kubeatlas: ">= 1.1.0"
+description: |
+  Strimzi Apache Kafka CRDs. Models the cluster-membership and
+  workload relationships the kafka.strimzi.io API group adds.
+
+  Coverage:
+    * kafka       — a ZooKeeper-based Kafka cluster (spec.zookeeper
+      present) runs the StatefulSets the operator names
+      <cluster>-kafka and <cluster>-zookeeper; Kafka -> StatefulSet
+      (MANAGES). KRaft clusters carry no spec.zookeeper and derive
+      no edge.
+    * kafka-topic — KafkaTopic -> the Kafka cluster named by the
+      strimzi.io/cluster label (BELONGS_TO_CLUSTER).
+    * kafka-user  — KafkaUser -> the Kafka cluster named by the
+      strimzi.io/cluster label (BELONGS_TO_CLUSTER).
+
+  KafkaTopic and KafkaUser carry a required strimzi.io/cluster label
+  naming their Kafka cluster; the cluster CR lives in the same
+  namespace, so the edge is soundly derivable from the labelled
+  resource alone.
+
+  Out of scope:
+    * KRaft / KafkaNodePool topology — node pools and StrimziPodSets
+      vary by Strimzi version; v0.1 covers the classic ZooKeeper
+      StatefulSet pair only.
+    * KafkaConnect / KafkaConnector / KafkaBridge / KafkaMirrorMaker.
+    * Listener TLS Secrets and the per-user credential Secret.
+
+  Edge-type note: MANAGES and BELONGS_TO_CLUSTER are new EdgeType
+  strings. The rules repo may emit any EdgeType-typed string today;
+  a main-repo follow-up registers the consts.
+maintainers:
+  - "@kubeatlas-maintainers"
+modules:
+  - name: kafka
+    file: kafka.rego
+    entrypoint: data.kubeatlas.rules.strimzi.kafka.derive
+    match:
+      group: kafka.strimzi.io
+      kind: Kafka
+  - name: kafka-topic
+    file: kafka-topic.rego
+    entrypoint: data.kubeatlas.rules.strimzi.kafka_topic.derive
+    match:
+      group: kafka.strimzi.io
+      kind: KafkaTopic
+  - name: kafka-user
+    file: kafka-user.rego
+    entrypoint: data.kubeatlas.rules.strimzi.kafka_user.derive
+    match:
+      group: kafka.strimzi.io
+      kind: KafkaUser
