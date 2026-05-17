@@ -1,0 +1,22 @@
+# An Istio VirtualService that routes the "reviews" host to the
+# reviews Service and is exposed through the bookinfo-gateway. The
+# virtualservice rule emits a ROUTES_TO edge (-> Service reviews)
+# and a BINDS_GATEWAY edge (-> Gateway bookinfo-gateway), both in
+# the bookinfo namespace.
+apiVersion: networking.istio.io/v1
+kind: VirtualService
+metadata:
+  name: reviews
+  namespace: bookinfo
+spec:
+  hosts:
+    - reviews
+  gateways:
+    - bookinfo-gateway
+  http:
+    - route:
+        - destination:
+            host: reviews
+            subset: v1
+            port:
+              number: 9080

@@ -1,0 +1,61 @@
+name: istio
+version: 0.1.0
+rego_api: v1
+kubeatlas: ">= 1.1.0"
+description: |
+  Istio service-mesh networking CRDs. Models the traffic-routing
+  relationships the networking.istio.io API group adds to a cluster.
+
+  Coverage:
+    * virtualservice  — VirtualService route destinations -> Service
+      (ROUTES_TO), and spec.gateways[] -> Gateway (BINDS_GATEWAY).
+    * destinationrule — DestinationRule spec.host -> Service
+      (CONFIGURES).
+    * gateway         — Gateway spec.servers[].tls.credentialName ->
+      the Kubernetes Secret holding the TLS certificate
+      (USES_TLS_SECRET).
+
+  Host resolution follows Istio's own rule: a host with no dots is a
+  Service in the resource's namespace; a host containing ".svc" is a
+  cluster FQDN (<name>.<namespace>.svc[.cluster.local]). Anything
+  else is an external host — reached through a ServiceEntry, out of
+  scope — and derives no edge, keeping the pack sound rather than
+  emitting dangling edges to Services that do not exist.
+
+  Out of scope:
+    * ServiceEntry / Sidecar / EnvoyFilter / WorkloadEntry — these
+      describe mesh configuration or external endpoints, not the
+      cluster-resource dependencies the graph models.
+    * Gateway spec.selector and the Gateway API
+      (gateway.networking.k8s.io) — label-selector fan-out needs a
+      cluster listing the per-resource rego engine does not provide;
+      the built-in selector extractors own that.
+    * Istio security / telemetry CRDs (AuthorizationPolicy,
+      PeerAuthentication, RequestAuthentication, Telemetry).
+
+  Edge-type note: ROUTES_TO is the existing built-in edge type
+  (Ingress -> Service); BINDS_GATEWAY / CONFIGURES / USES_TLS_SECRET
+  are new EdgeType strings. The rules repo may emit any
+  EdgeType-typed string today; a main-repo follow-up registers the
+  consts and documents them.
+maintainers:
+  - "@kubeatlas-maintainers"
+modules:
+  - name: virtualservice
+    file: virtualservice.rego
+    entrypoint: data.kubeatlas.rules.istio.virtualservice.derive
+    match:
+      group: networking.istio.io
+      kind: VirtualService
+  - name: destinationrule
+    file: destinationrule.rego
+    entrypoint: data.kubeatlas.rules.istio.destinationrule.derive
+    match:
+      group: networking.istio.io
+      kind: DestinationRule
+  - name: gateway
+    file: gateway.rego
+    entrypoint: data.kubeatlas.rules.istio.gateway.derive
+    match:
+      group: networking.istio.io
+      kind: Gateway

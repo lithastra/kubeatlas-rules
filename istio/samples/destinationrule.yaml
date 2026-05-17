@@ -1,0 +1,17 @@
+# An Istio DestinationRule defining the traffic policy for the
+# reviews Service. The destinationrule rule emits one CONFIGURES
+# edge: DestinationRule -> Service reviews in the same namespace.
+apiVersion: networking.istio.io/v1
+kind: DestinationRule
+metadata:
+  name: reviews
+  namespace: bookinfo
+spec:
+  host: reviews
+  trafficPolicy:
+    loadBalancer:
+      simple: ROUND_ROBIN
+  subsets:
+    - name: v1
+      labels:
+        version: v1

@@ -1,0 +1,21 @@
+# An Istio Gateway terminating TLS for bookinfo.example.com. The
+# gateway rule emits one USES_TLS_SECRET edge: Gateway -> Secret
+# bookinfo-cert (the server's credentialName) in the same namespace.
+apiVersion: networking.istio.io/v1
+kind: Gateway
+metadata:
+  name: bookinfo-gateway
+  namespace: bookinfo
+spec:
+  selector:
+    istio: ingressgateway
+  servers:
+    - port:
+        number: 443
+        name: https
+        protocol: HTTPS
+      tls:
+        mode: SIMPLE
+        credentialName: bookinfo-cert
+      hosts:
+        - bookinfo.example.com
