@@ -1,0 +1,11 @@
+# A Velero Restore replaying a specific Backup. The restore rule
+# emits one RESTORES_FROM edge: Restore -> Backup nightly-20260517.
+apiVersion: velero.io/v1
+kind: Restore
+metadata:
+  name: restore-petclinic
+  namespace: velero
+spec:
+  backupName: nightly-20260517
+  includedNamespaces:
+    - petclinic

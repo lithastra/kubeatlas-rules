@@ -1,0 +1,15 @@
+# A Velero Backup. The backup rule emits a STORED_IN edge to
+# BackupStorageLocation "default" and a USES_SNAPSHOT_LOCATION edge
+# to VolumeSnapshotLocation "aws-primary".
+apiVersion: velero.io/v1
+kind: Backup
+metadata:
+  name: nightly-20260517
+  namespace: velero
+spec:
+  storageLocation: default
+  volumeSnapshotLocations:
+    - aws-primary
+  includedNamespaces:
+    - petclinic
+  ttl: 720h0m0s

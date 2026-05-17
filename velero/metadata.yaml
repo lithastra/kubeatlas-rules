@@ -1,0 +1,55 @@
+name: velero
+version: 0.1.0
+rego_api: v1
+kubeatlas: ">= 1.1.0"
+description: |
+  Velero backup-and-restore CRDs. Models the relationships the
+  velero.io API group adds between backups, restores, schedules and
+  their storage locations.
+
+  Coverage:
+    * backup   — Backup spec.storageLocation -> BackupStorageLocation
+      (STORED_IN), and each spec.volumeSnapshotLocations[] ->
+      VolumeSnapshotLocation (USES_SNAPSHOT_LOCATION).
+    * restore  — Restore spec.backupName -> Backup, and
+      spec.scheduleName -> Schedule, both RESTORES_FROM.
+    * schedule — the same two edges as backup, read from the
+      embedded spec.template Backup spec.
+
+  Velero installs all of these CRs into one namespace (the Velero
+  install namespace), so every referenced resource is resolved in
+  the referencing resource's own namespace.
+
+  Out of scope:
+    * The object-storage bucket / volume-snapshot provider behind a
+      BackupStorageLocation or VolumeSnapshotLocation — that is
+      cloud infrastructure, not a cluster resource (invariant 2.3).
+    * DownloadRequest / PodVolumeBackup / DataUpload internal CRs.
+    * Backup resource label selectors and includedNamespaces — a
+      backup's contents are a query, not a static edge set.
+
+  Edge-type note: STORED_IN, USES_SNAPSHOT_LOCATION and
+  RESTORES_FROM are new EdgeType strings. The rules repo may emit
+  any EdgeType-typed string today; a main-repo follow-up registers
+  the consts.
+maintainers:
+  - "@kubeatlas-maintainers"
+modules:
+  - name: backup
+    file: backup.rego
+    entrypoint: data.kubeatlas.rules.velero.backup.derive
+    match:
+      group: velero.io
+      kind: Backup
+  - name: restore
+    file: restore.rego
+    entrypoint: data.kubeatlas.rules.velero.restore.derive
+    match:
+      group: velero.io
+      kind: Restore
+  - name: schedule
+    file: schedule.rego
+    entrypoint: data.kubeatlas.rules.velero.schedule.derive
+    match:
+      group: velero.io
+      kind: Schedule

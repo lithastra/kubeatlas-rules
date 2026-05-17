@@ -1,0 +1,17 @@
+# A Velero Schedule whose Backup template designates a storage and
+# a volume-snapshot location. The schedule rule emits a STORED_IN
+# edge and a USES_SNAPSHOT_LOCATION edge from the template.
+apiVersion: velero.io/v1
+kind: Schedule
+metadata:
+  name: nightly
+  namespace: velero
+spec:
+  schedule: 0 1 * * *
+  template:
+    storageLocation: default
+    volumeSnapshotLocations:
+      - aws-primary
+    includedNamespaces:
+      - petclinic
+    ttl: 720h0m0s
