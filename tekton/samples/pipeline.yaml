@@ -1,0 +1,21 @@
+# A Tekton Pipeline composing two Tasks plus a finally Task. The
+# pipeline rule emits one USES_TASK edge per taskRef — three here.
+apiVersion: tekton.dev/v1
+kind: Pipeline
+metadata:
+  name: build-and-deploy
+  namespace: ci
+spec:
+  tasks:
+    - name: build
+      taskRef:
+        name: buildpacks
+    - name: deploy
+      runAfter:
+        - build
+      taskRef:
+        name: kubectl-apply
+  finally:
+    - name: notify
+      taskRef:
+        name: slack-notify

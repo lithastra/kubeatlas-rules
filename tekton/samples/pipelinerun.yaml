@@ -1,0 +1,11 @@
+# A Tekton PipelineRun executing the build-and-deploy Pipeline. The
+# pipelinerun rule emits one RUNS_PIPELINE edge: PipelineRun ->
+# Pipeline build-and-deploy.
+apiVersion: tekton.dev/v1
+kind: PipelineRun
+metadata:
+  name: build-and-deploy-run-20260517
+  namespace: ci
+spec:
+  pipelineRef:
+    name: build-and-deploy

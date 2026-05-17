@@ -1,0 +1,10 @@
+# A Tekton TaskRun executing the buildpacks Task. The taskrun rule
+# emits one RUNS_TASK edge: TaskRun -> Task buildpacks.
+apiVersion: tekton.dev/v1
+kind: TaskRun
+metadata:
+  name: buildpacks-run-20260517
+  namespace: ci
+spec:
+  taskRef:
+    name: buildpacks

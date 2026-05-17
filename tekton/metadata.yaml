@@ -1,0 +1,54 @@
+name: tekton
+version: 0.1.0
+rego_api: v1
+kubeatlas: ">= 1.1.0"
+description: |
+  Tekton Pipelines CRDs. Models the composition and execution
+  relationships the tekton.dev API group adds.
+
+  Coverage:
+    * pipeline    — Pipeline -> each Task referenced by a
+      spec.tasks[] or spec.finally[] taskRef (USES_TASK).
+    * pipelinerun — PipelineRun spec.pipelineRef.name -> Pipeline
+      (RUNS_PIPELINE).
+    * taskrun     — TaskRun spec.taskRef -> Task (RUNS_TASK).
+
+  A taskRef whose kind is ClusterTask resolves to a cluster-scoped
+  ClusterTask node; otherwise it is a namespaced Task in the
+  referencing resource's namespace.
+
+  Out of scope:
+    * Inline definitions — a taskSpec / pipelineSpec embeds the
+      definition rather than referencing a resource, so there is no
+      edge to draw.
+    * Resolver references (git / bundle / hub / cluster resolvers)
+      carry no .name; the resource they fetch is not in the cluster
+      under a knowable name, so no edge is derived.
+    * Workspaces, params and the Pipeline runAfter ordering DAG.
+    * Tekton Triggers (EventListener, TriggerBinding, TriggerTemplate)
+      and Tekton Chains.
+
+  Edge-type note: USES_TASK, RUNS_PIPELINE and RUNS_TASK are new
+  EdgeType strings. The rules repo may emit any EdgeType-typed
+  string today; a main-repo follow-up registers the consts.
+maintainers:
+  - "@kubeatlas-maintainers"
+modules:
+  - name: pipeline
+    file: pipeline.rego
+    entrypoint: data.kubeatlas.rules.tekton.pipeline.derive
+    match:
+      group: tekton.dev
+      kind: Pipeline
+  - name: pipelinerun
+    file: pipelinerun.rego
+    entrypoint: data.kubeatlas.rules.tekton.pipelinerun.derive
+    match:
+      group: tekton.dev
+      kind: PipelineRun
+  - name: taskrun
+    file: taskrun.rego
+    entrypoint: data.kubeatlas.rules.tekton.taskrun.derive
+    match:
+      group: tekton.dev
+      kind: TaskRun
