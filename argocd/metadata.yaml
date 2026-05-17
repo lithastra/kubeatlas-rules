@@ -1,0 +1,70 @@
+name: argocd
+version: 0.1.0
+rego_api: v1
+kubeatlas: ">= 1.1.0"
+description: |
+  Argo CD GitOps CRDs. Models the delivery relationships the
+  argoproj.io API group adds to a cluster.
+
+  Coverage:
+    * application    — Application spec.project -> AppProject
+      (BELONGS_TO_PROJECT), spec.destination.namespace -> Namespace
+      (DEPLOYS_TO), and spec.source.repoURL / spec.sources[].repoURL
+      -> GitRepo (SOURCED_FROM).
+    * applicationset — the same three edges, derived from the
+      embedded spec.template.spec Application template. Values that
+      carry a {{ }} generator placeholder are skipped.
+    * appproject     — AppProject spec.destinations[].namespace ->
+      Namespace (ALLOWS_DESTINATION), for literal namespace names.
+
+  GitRepo is a synthetic node kind: an Argo CD repoURL is a git URL,
+  not a Kubernetes resource, but surfacing it lets the graph answer
+  "which Applications share a repository". The URL is the node name.
+
+  Namespace assumptions:
+    * AppProject is resolved in the Application's own namespace —
+      the standard install keeps Applications and AppProjects
+      together in the argocd namespace. Apps-in-any-namespace
+      setups that split them are not modelled in v0.1.
+    * spec.destination.namespace is emitted as a cluster Namespace
+      regardless of spec.destination.server; a remote-cluster
+      destination simply yields a dangling edge, which the store
+      tolerates.
+
+  Out of scope:
+    * Generated Applications — an ApplicationSet names its children
+      through generator templates, so the child names are not
+      statically knowable and no ApplicationSet -> Application edge
+      is emitted.
+    * spec.destinations[].namespace globs / negations ("*",
+      "prod-*", "!kube-system") in AppProject — only literal
+      namespace names derive an edge.
+    * Repository / cluster credential Secrets — Argo CD stores
+      these as labelled Secrets the built-in extractors already
+      see; this pack does not re-derive them.
+
+  Edge-type note: BELONGS_TO_PROJECT / DEPLOYS_TO / SOURCED_FROM /
+  ALLOWS_DESTINATION are new EdgeType strings. The rules repo may
+  emit any EdgeType-typed string today; a main-repo follow-up
+  registers the consts and documents them.
+maintainers:
+  - "@kubeatlas-maintainers"
+modules:
+  - name: application
+    file: application.rego
+    entrypoint: data.kubeatlas.rules.argocd.application.derive
+    match:
+      group: argoproj.io
+      kind: Application
+  - name: applicationset
+    file: applicationset.rego
+    entrypoint: data.kubeatlas.rules.argocd.applicationset.derive
+    match:
+      group: argoproj.io
+      kind: ApplicationSet
+  - name: appproject
+    file: appproject.rego
+    entrypoint: data.kubeatlas.rules.argocd.appproject.derive
+    match:
+      group: argoproj.io
+      kind: AppProject

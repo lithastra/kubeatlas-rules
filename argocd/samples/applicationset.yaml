@@ -1,0 +1,26 @@
+# An Argo CD ApplicationSet whose template carries a static project
+# and repoURL but a generator-templated destination namespace. The
+# applicationset rule emits BELONGS_TO_PROJECT and SOURCED_FROM; the
+# "{{.name}}" namespace holds a placeholder and derives no edge.
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: cluster-addons
+  namespace: argocd
+spec:
+  generators:
+    - list:
+        elements:
+          - name: guestbook
+  template:
+    metadata:
+      name: '{{.name}}'
+    spec:
+      project: default
+      source:
+        repoURL: https://github.com/argoproj/argocd-example-apps.git
+        path: '{{.name}}'
+        targetRevision: HEAD
+      destination:
+        server: https://kubernetes.default.svc
+        namespace: '{{.name}}'

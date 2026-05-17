@@ -1,0 +1,16 @@
+# An Argo CD AppProject scoping a team to two namespaces. The
+# appproject rule emits one ALLOWS_DESTINATION edge per literal
+# namespace, so this project yields two edges.
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: team-a
+  namespace: argocd
+spec:
+  sourceRepos:
+    - 'https://github.com/org/*'
+  destinations:
+    - server: https://kubernetes.default.svc
+      namespace: team-a-dev
+    - server: https://kubernetes.default.svc
+      namespace: team-a-prod
