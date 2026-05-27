@@ -1,0 +1,31 @@
+# Provider with a DeploymentRuntimeConfig reference.
+# Exercises the provider module: one USES_RUNTIME_CONFIG edge
+# to "provider-aws-runtime".
+apiVersion: pkg.crossplane.io/v1
+kind: Provider
+metadata:
+  name: provider-aws-s3
+spec:
+  package: xpkg.upbound.io/upbound/provider-aws-s3:v1.14.0
+  runtimeConfigRef:
+    name: provider-aws-runtime
+---
+# The DeploymentRuntimeConfig itself (target of the edge above).
+apiVersion: pkg.crossplane.io/v1beta1
+kind: DeploymentRuntimeConfig
+metadata:
+  name: provider-aws-runtime
+spec:
+  deploymentTemplate:
+    spec:
+      selector: {}
+      template:
+        spec:
+          containers:
+            - name: package-runtime
+              resources:
+                limits:
+                  memory: 512Mi
+                requests:
+                  cpu: 100m
+                  memory: 256Mi

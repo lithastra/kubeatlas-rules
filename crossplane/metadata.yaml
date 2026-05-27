@@ -1,0 +1,51 @@
+name: crossplane
+version: 0.1.0
+rego_api: v1
+kubeatlas: ">= 1.1.0"
+description: |
+  Crossplane composition and provider CRDs. Three modules covering
+  the core extension/packaging surface:
+
+    * xrd          — CompositeResourceDefinition spec.defaultCompositionRef
+                     -> Composition (USES_COMPOSITION).
+    * composition  — Composition spec.pipeline[].functionRef -> Function
+                     (USES_FUNCTION). Only fires in pipeline mode; classic
+                     resources-array Compositions produce no Rego edges
+                     because the array entries are templates, not live
+                     resource references.
+    * provider     — Provider spec.runtimeConfigRef -> DeploymentRuntimeConfig
+                     (USES_RUNTIME_CONFIG).
+
+  Out of scope (and why):
+    * Composite Resources (XRs) and Claims (XRCs) — their GVKs are
+      user-defined at runtime by XRDs, so a static match.kind cannot
+      catch them. The main kubeatlas extractor should handle these via
+      dynamic CRD discovery if full XR -> managed-resource edges are
+      wanted.
+    * Managed Resources — same dynamic-GVK problem; the providerConfigRef
+      edge from a managed resource to its ProviderConfig would require
+      matching every provider-specific kind.
+    * Configuration (pkg.crossplane.io) — its spec.dependsOn[] lists OCI
+      packages, not K8s resource names, so no cluster-internal edge.
+    * EnvironmentConfig references — rare in practice; add if requested.
+maintainers:
+  - "@kubeatlas-maintainers"
+modules:
+  - name: xrd
+    file: xrd.rego
+    entrypoint: data.kubeatlas.rules.crossplane.xrd.derive
+    match:
+      group: apiextensions.crossplane.io
+      kind: CompositeResourceDefinition
+  - name: composition
+    file: composition.rego
+    entrypoint: data.kubeatlas.rules.crossplane.composition.derive
+    match:
+      group: apiextensions.crossplane.io
+      kind: Composition
+  - name: provider
+    file: provider.rego
+    entrypoint: data.kubeatlas.rules.crossplane.provider.derive
+    match:
+      group: pkg.crossplane.io
+      kind: Provider

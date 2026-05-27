@@ -17,6 +17,7 @@ rule pack here.
 | **aks** | Azure Kubernetes Service — AAD Pod Identity bindings |
 | **argocd** | Argo CD Applications → managed resources |
 | **cert-manager** | Certificate → Secret derivation |
+| **crossplane** | XRD → Composition, Composition → Function, Provider → RuntimeConfig |
 | **eks** | Elastic Kubernetes Service — IRSA, VPC CNI, Karpenter |
 | **gke** | Google Kubernetes Engine — Workload Identity, managed certs, BackendConfig |
 | **istio** | VirtualService / DestinationRule / Gateway routing |
