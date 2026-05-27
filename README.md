@@ -3,12 +3,28 @@
 Community rule packs for the
 [KubeAtlas](https://github.com/lithastra/kubeatlas) Rego engine.
 
-KubeAtlas's core ships eight built-in edge types
+KubeAtlas's core ships ten built-in edge types
 (`OWNS`, `USES_CONFIGMAP`, `USES_SECRET`, …) that cover every
 relationship in the core Kubernetes API. Anything beyond core
 — OpenShift Routes, cert-manager Certificates, Argo
-Applications, Crossplane Compositions — lives in a Rego rule
-pack here.
+Applications, Istio VirtualServices, and more — lives in a Rego
+rule pack here.
+
+### Available packs
+
+| Pack | Description |
+|---|---|
+| **aks** | Azure Kubernetes Service — AAD Pod Identity bindings |
+| **argocd** | Argo CD Applications → managed resources |
+| **cert-manager** | Certificate → Secret derivation |
+| **eks** | Elastic Kubernetes Service — IRSA, VPC CNI, Karpenter |
+| **gke** | Google Kubernetes Engine — Workload Identity, managed certs, BackendConfig |
+| **istio** | VirtualService / DestinationRule / Gateway routing |
+| **knative** | Knative Service → Configuration → Revision chain |
+| **openshift** | Routes, DeploymentConfigs, BuildConfigs (also embedded in binary) |
+| **strimzi** | Kafka / KafkaTopic / KafkaConnect operator resources |
+| **tekton** | Pipeline → Task → Run execution chain |
+| **velero** | Backup / Schedule / Restore relationships |
 
 The KubeAtlas binary loads packs from this catalogue at
 runtime via OCI artifacts. A typical install:
@@ -19,7 +35,7 @@ rulePacks:
   openshift: auto       # detected and embedded; no entry here
   extras:
     - oci://ghcr.io/lithastra/rules/cert-manager:0.1.0
-    - oci://ghcr.io/lithastra/rules/argo:0.2.0
+    - oci://ghcr.io/lithastra/rules/argocd:0.1.0
 ```
 
 ## Five-minute tour of a rule pack
