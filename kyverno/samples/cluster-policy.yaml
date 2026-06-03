@@ -1,0 +1,25 @@
+# Sample ClusterPolicy whose rule loads a ConfigMap into its context.
+# `kubeatlas rules-test` evaluates the pack against this and expects a
+# REFERENCES_CONTEXT edge to kyverno/ConfigMap/allowed-teams.
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: require-team-label
+spec:
+  rules:
+    - name: check-team
+      context:
+        - name: allowed
+          configMap:
+            name: allowed-teams
+            namespace: kyverno
+      match:
+        any:
+          - resources:
+              kinds: ["Deployment"]
+      validate:
+        message: "team label must be one of the allowed values"
+        pattern:
+          metadata:
+            labels:
+              team: "?*"

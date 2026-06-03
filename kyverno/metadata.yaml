@@ -1,0 +1,35 @@
+name: kyverno
+version: 0.1.0
+rego_api: v1
+kubeatlas: ">= 1.4.0"
+description: |
+  Kyverno indirect references. The built-in extractor models a policy's
+  validate rules as ENFORCES edges; this pack adds the edge it cannot
+  see — a rule that loads data from a ConfigMap via
+  spec.rules[].context[].configMap, so the graph shows the policy
+  depends on that ConfigMap.
+
+  The edge type REFERENCES_CONTEXT is deliberately distinct from
+  Gatekeeper's REFERENCES_PARAM: the two engines parameterise policies
+  through different mechanisms, and keeping them separate has diagnostic
+  value.
+
+  The module uses the engine's catch-all match (empty group + empty
+  kind) so it covers both ClusterPolicy and Policy, and gates inside the
+  rule on the kyverno.io apiVersion; non-policy resources produce
+  nothing.
+
+  Opt in via Helm:
+
+      rulePacks:
+        extras:
+          - oci://ghcr.io/lithastra/rules/kyverno:0.1.0
+maintainers:
+  - "@kubeatlas-maintainers"
+modules:
+  - name: cluster-policy
+    file: cluster-policy.rego
+    entrypoint: data.kubeatlas.rules.kyverno.cluster_policy.derive
+    match:
+      group: ""
+      kind: ""
