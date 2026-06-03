@@ -1,0 +1,34 @@
+name: gatekeeper
+version: 0.1.0
+rego_api: v1
+kubeatlas: ">= 1.4.0"
+description: |
+  OPA Gatekeeper indirect references. The built-in extractor models a
+  Constraint's spec.match as ENFORCES edges; this pack adds the edge it
+  cannot see — a Constraint that sources its parameters from a ConfigMap
+  via spec.parameters.configMap, so the graph shows that changing the
+  ConfigMap changes the policy.
+
+  The edge type REFERENCES_PARAM is deliberately distinct from Kyverno's
+  REFERENCES_CONTEXT: the two engines parameterise policies through
+  different mechanisms, and keeping them separate has diagnostic value.
+
+  Constraint kinds are generated per ConstraintTemplate and are not
+  known ahead of time, so the module uses the engine's catch-all match
+  (empty group + empty kind) and gates inside the rule on the
+  constraints.gatekeeper.sh apiVersion.
+
+  Opt in via Helm:
+
+      rulePacks:
+        extras:
+          - oci://ghcr.io/lithastra/rules/gatekeeper:0.1.0
+maintainers:
+  - "@kubeatlas-maintainers"
+modules:
+  - name: constraint
+    file: constraint.rego
+    entrypoint: data.kubeatlas.rules.gatekeeper.constraint.derive
+    match:
+      group: ""
+      kind: ""
