@@ -1,10 +1,9 @@
 name: Test
 
-# Per-PR gate: opa check + opa test for every modified pack, plus
+# Per-PR gate: opa check + opa test for every pack, metadata schema
+# validation, and kubeatlas rules-test against every sample set, plus
 # the conventional-commits + DCO checks the kubeatlas main repo
-# enforces. The integration step (kubeatlas rules-test against
-# samples/) runs once P2-T13 ships the CLI; until then we keep the
-# job around as a no-op so the workflow shape is stable.
+# enforces.
 #
 # Untrusted GitHub event inputs (PR title, commit messages) are
 # only read into env vars and quoted on the shell side — never
@@ -14,6 +13,9 @@ on:
   pull_request:
   push:
     branches: [main]
+
+permissions:
+  contents: read
 
 jobs:
   non-ascii-check:
@@ -71,7 +73,7 @@ jobs:
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
           set -e
-          missing=$(git log --format='%H %s' "${BASE_SHA}..${HEAD_SHA}" | while read sha rest; do
+          missing=$(git log --format='%H %s' "${BASE_SHA}..${HEAD_SHA}" | while read -r sha rest; do
             if ! git log -1 --format=%B "$sha" | grep -q "^Signed-off-by: "; then
               echo "$sha"
             fi
@@ -124,17 +126,23 @@ jobs:
   kubeatlas-integration:
     name: kubeatlas rules-test
     runs-on: ubuntu-latest
-    # Skipped until P2-T13 ships the rules-test CLI in the main repo.
-    # Once that lands, drop the `if: false` and the job picks up
-    # automatically — Makefile target is already wired.
-    if: false
     steps:
       - uses: actions/checkout@v4
       - name: Install kubeatlas CLI
+        env:
+          KUBEATLAS_VERSION: v1.5.0
         run: |
-          curl -fsSL -o kubeatlas \
-            https://github.com/lithastra/kubeatlas/releases/latest/download/kubeatlas-linux-amd64
-          chmod +x kubeatlas
-          sudo mv kubeatlas /usr/local/bin/kubeatlas
+          set -euo pipefail
+          semver="${KUBEATLAS_VERSION#v}"
+          archive="kubeatlas_${semver}_linux_amd64.tar.gz"
+          base="https://github.com/lithastra/kubeatlas/releases/download/${KUBEATLAS_VERSION}"
+          tmp="$(mktemp -d)"
+          trap 'rm -rf "${tmp}"' EXIT
+          curl -fsSL -o "${tmp}/${archive}" "${base}/${archive}"
+          curl -fsSL -o "${tmp}/checksums.txt" "${base}/checksums.txt"
+          (cd "${tmp}" && grep -F "${archive}" checksums.txt | sha256sum -c -)
+          tar -xzf "${tmp}/${archive}" -C "${tmp}" kubeatlas
+          sudo install -m 0755 "${tmp}/kubeatlas" /usr/local/bin/kubeatlas
+          kubeatlas --version
       - name: make integration
         run: make integration

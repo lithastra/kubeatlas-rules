@@ -1,0 +1,78 @@
+name: Distribution audit
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '17 4 * * 1'
+
+permissions:
+  contents: read
+
+jobs:
+  verify-catalogue:
+    name: Verify public OCI catalogue
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install ORAS
+        uses: oras-project/setup-oras@v1
+        with:
+          version: 1.2.0
+
+      - name: Install cosign
+        uses: sigstore/cosign-installer@v3
+
+      - name: Install kubeatlas CLI
+        env:
+          KUBEATLAS_VERSION: v1.5.0
+        run: |
+          set -euo pipefail
+          semver="${KUBEATLAS_VERSION#v}"
+          archive="kubeatlas_${semver}_linux_amd64.tar.gz"
+          base="https://github.com/lithastra/kubeatlas/releases/download/${KUBEATLAS_VERSION}"
+          tmp="$(mktemp -d)"
+          trap 'rm -rf "${tmp}"' EXIT
+          curl -fsSL -o "${tmp}/${archive}" "${base}/${archive}"
+          curl -fsSL -o "${tmp}/checksums.txt" "${base}/checksums.txt"
+          (cd "${tmp}" && grep -F "${archive}" checksums.txt | sha256sum -c -)
+          tar -xzf "${tmp}/${archive}" -C "${tmp}" kubeatlas
+          sudo install -m 0755 "${tmp}/kubeatlas" /usr/local/bin/kubeatlas
+          kubeatlas --version
+
+      - name: Resolve, verify, and pull every formal pack
+        run: |
+          set -euo pipefail
+          checked=0
+          for metadata in */metadata.yaml; do
+            pack="${metadata%%/*}"
+            if [ "${pack}" = "sample" ]; then
+              continue
+            fi
+            version="$(awk '$1 == "version:" { print $2; exit }' "${metadata}")"
+            ref="ghcr.io/lithastra/rules/${pack}:${version}"
+            digest="$(oras resolve "${ref}")"
+            identity="^https://github\\.com/lithastra/kubeatlas-rules/\\.github/workflows/release\\.yml@refs/tags/${pack}/(sign-)?v${version}$"
+
+            cosign verify \
+              --certificate-identity-regexp "${identity}" \
+              --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \
+              "${ref}@${digest}"
+
+            out="$(mktemp -d)"
+            oras pull --output "${out}" "${ref}@${digest}"
+            test -s "${out}/metadata.yaml"
+            test -n "$(find "${out}" -maxdepth 1 -name '*.rego' -print -quit)"
+            kubeatlas rules-test \
+              --pack="${out}" \
+              --samples="${pack}/samples"
+            rm -rf "${out}"
+
+            checked=$((checked + 1))
+            echo "Verified ${ref}@${digest}"
+          done
+
+          if [ "${checked}" -ne 14 ]; then
+            echo "::error::Expected 14 formal packs, verified ${checked}"
+            exit 1
+          fi

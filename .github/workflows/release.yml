@@ -1,9 +1,9 @@
 name: Release
 
-# Tag-driven OCI publish. Tags follow the <pack>/v<version> layout
-# (e.g. openshift/v0.1.0). The job parses the pack name out of the
-# tag, packages that directory, and pushes to
-# ghcr.io/lithastra/rules/<pack>:<version>.
+# Tag-driven OCI publish. Release tags follow the <pack>/v<version>
+# layout (e.g. openshift/v0.1.0). A <pack>/sign-v<version>
+# maintenance tag signs the already-published digest without moving
+# the release tag or republishing its bytes.
 #
 # Tag input is read into an env var (GH_REF) and parsed in shell —
 # never interpolated into a `run:` line. github.actor is similarly
@@ -14,10 +14,12 @@ on:
   push:
     tags:
       - '*/v*'
+      - '*/sign-v*'
 
 permissions:
   contents: read
   packages: write
+  id-token: write
 
 jobs:
   publish:
@@ -31,26 +33,48 @@ jobs:
         env:
           GH_REF: ${{ github.ref }}
         run: |
-          set -e
+          set -euo pipefail
           tag="${GH_REF#refs/tags/}"
           pack="${tag%%/*}"
-          version="${tag#*/v}"
-          if [ -z "$pack" ] || [ -z "$version" ] || [ "$pack" = "$tag" ]; then
-            echo "::error::Tag '$tag' does not match <pack>/v<version>"
+          suffix="${tag#*/}"
+          if [[ "${suffix}" == sign-v* ]]; then
+            version="${suffix#sign-v}"
+            backfill=true
+          else
+            version="${suffix#v}"
+            backfill=false
+          fi
+          if [ -z "$pack" ] || [ -z "$version" ] || [ "$pack" = "$tag" ] || [ "$version" = "$suffix" ]; then
+            echo "::error::Tag '$tag' does not match <pack>/v<version> or <pack>/sign-v<version>"
             exit 1
           fi
           if [ ! -d "$pack" ]; then
             echo "::error::Tag references pack '$pack' but no such directory"
             exit 1
           fi
-          echo "pack=$pack" >> "$GITHUB_OUTPUT"
-          echo "version=$version" >> "$GITHUB_OUTPUT"
-          echo "Resolved pack=$pack version=$version"
+          if [ "$pack" = "sample" ]; then
+            echo "::error::The sample fixture is not a publishable rule pack"
+            exit 1
+          fi
+          manifest_version="$(awk '$1 == "version:" { print $2; exit }' "$pack/metadata.yaml")"
+          if [ "$manifest_version" != "$version" ]; then
+            echo "::error::Tag version '$version' does not match $pack/metadata.yaml version '$manifest_version'"
+            exit 1
+          fi
+          {
+            echo "pack=$pack"
+            echo "version=$version"
+            echo "backfill=$backfill"
+          } >> "$GITHUB_OUTPUT"
+          echo "Resolved pack=$pack version=$version backfill=$backfill"
 
       - name: Install ORAS
         uses: oras-project/setup-oras@v1
         with:
           version: 1.2.0
+
+      - name: Install cosign
+        uses: sigstore/cosign-installer@v3
 
       - name: Log in to ghcr.io
         env:
@@ -59,19 +83,55 @@ jobs:
         run: |
           echo "$GH_TOKEN" | oras login ghcr.io -u "$GH_ACTOR" --password-stdin
 
-      - name: Pack + push artifact
+      - name: Pack and push artifact for a new release tag
+        if: steps.parse.outputs.backfill == 'false'
+        id: push
         env:
           PACK: ${{ steps.parse.outputs.pack }}
           VERSION: ${{ steps.parse.outputs.version }}
         run: |
-          set -e
+          set -euo pipefail
           cd "$PACK"
           files=(metadata.yaml)
           for f in *.rego; do
             [ -f "$f" ] && files+=("$f")
           done
-          echo "Pushing ghcr.io/lithastra/rules/${PACK}:${VERSION}"
+          ref="ghcr.io/lithastra/rules/${PACK}:${VERSION}"
+          echo "Pushing ${ref}"
           oras push \
-            "ghcr.io/lithastra/rules/${PACK}:${VERSION}" \
+            "${ref}" \
             --artifact-type "application/vnd.kubeatlas.rulepack.v1+yaml" \
             "${files[@]}"
+          digest="$(oras resolve "${ref}")"
+          echo "ref=${ref}" >> "$GITHUB_OUTPUT"
+          echo "digest=${digest}" >> "$GITHUB_OUTPUT"
+
+      - name: Resolve existing artifact for signature backfill
+        if: steps.parse.outputs.backfill == 'true'
+        id: existing
+        env:
+          PACK: ${{ steps.parse.outputs.pack }}
+          VERSION: ${{ steps.parse.outputs.version }}
+        run: |
+          set -euo pipefail
+          ref="ghcr.io/lithastra/rules/${PACK}:${VERSION}"
+          digest="$(oras resolve "${ref}")"
+          echo "ref=${ref}" >> "$GITHUB_OUTPUT"
+          echo "digest=${digest}" >> "$GITHUB_OUTPUT"
+
+      - name: Sign artifact with GitHub Actions OIDC
+        env:
+          REF: ${{ steps.push.outputs.ref || steps.existing.outputs.ref }}
+          DIGEST: ${{ steps.push.outputs.digest || steps.existing.outputs.digest }}
+        run: cosign sign --yes "${REF}@${DIGEST}"
+
+      - name: Verify the published identity and digest
+        env:
+          REF: ${{ steps.push.outputs.ref || steps.existing.outputs.ref }}
+          DIGEST: ${{ steps.push.outputs.digest || steps.existing.outputs.digest }}
+          WORKFLOW_REF: ${{ github.workflow_ref }}
+        run: |
+          cosign verify \
+            --certificate-identity "https://github.com/${WORKFLOW_REF}" \
+            --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \
+            "${REF}@${DIGEST}"
