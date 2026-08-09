@@ -22,7 +22,7 @@ jobs:
     name: No non-ASCII in source
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Scan rego + yaml for CJK characters
         run: |
           set -e
@@ -39,10 +39,10 @@ jobs:
     name: Commit messages follow Conventional Commits
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: '20'
       - run: npm install --no-save @commitlint/cli@19 @commitlint/config-conventional@19
@@ -68,7 +68,7 @@ jobs:
     runs-on: ubuntu-latest
     if: github.event_name == 'pull_request'
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
       - name: Verify Signed-off-by on each commit
@@ -94,8 +94,8 @@ jobs:
     name: opa check + metadata schema
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
         with:
           go-version: '1.26'
           cache: true
@@ -117,7 +117,7 @@ jobs:
     name: opa test
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Install opa
         run: |
           curl -fsSL -o opa \
@@ -131,7 +131,7 @@ jobs:
     name: kubeatlas rules-test
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Install kubeatlas CLI
         env:
           KUBEATLAS_VERSION: v1.5.0
