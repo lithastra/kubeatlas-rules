@@ -26,7 +26,7 @@ jobs:
     name: Push pack to ghcr.io
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Parse pack and version from tag
         id: parse
@@ -69,7 +69,7 @@ jobs:
           echo "Resolved pack=$pack version=$version backfill=$backfill"
 
       - name: Install ORAS
-        uses: oras-project/setup-oras@v1
+        uses: oras-project/setup-oras@v2
         with:
           version: 1.2.0
 
