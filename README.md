@@ -19,9 +19,11 @@ rule pack here.
 | **cert-manager** | Certificate → Secret derivation |
 | **crossplane** | XRD → Composition, Composition → Function, Provider → RuntimeConfig |
 | **eks** | Elastic Kubernetes Service — IRSA, VPC CNI, Karpenter |
+| **gatekeeper** | Gatekeeper constraints → parameter ConfigMaps |
 | **gke** | Google Kubernetes Engine — Workload Identity, managed certs, BackendConfig |
 | **istio** | VirtualService / DestinationRule / Gateway routing |
 | **knative** | Knative Service → Configuration → Revision chain |
+| **kyverno** | Kyverno policies → policy-context ConfigMaps |
 | **openshift** | Routes, DeploymentConfigs, BuildConfigs (also embedded in binary) |
 | **strimzi** | Kafka / KafkaTopic / KafkaConnect operator resources |
 | **tekton** | Pipeline → Task → Run execution chain |
@@ -119,9 +121,13 @@ kubeatlas-rules/
 ```
 
 The release workflow ships each pack as its own OCI artifact
-on tag `<pack>/v<version>`. Tags belong to a single pack so
-versioning stays independent — `cert-manager/v0.2.0` does
-not force an `openshift/v0.2.0`.
+on tag `<pack>/v<version>`, then signs its immutable digest with
+GitHub Actions OIDC and verifies the expected workflow identity.
+Tags belong to a single pack so versioning stays independent —
+`cert-manager/v0.2.0` does not force an `openshift/v0.2.0`.
+For an artifact published before signing was enabled, the maintenance
+tag `<pack>/sign-v<version>` signs the existing digest without moving
+the original release tag or republishing its bytes.
 
 ## Contributing
 
