@@ -25,7 +25,7 @@ jobs:
 
       - name: Install kubeatlas CLI
         env:
-          KUBEATLAS_VERSION: v1.5.1
+          KUBEATLAS_VERSION: v1.5.2
         run: |
           set -euo pipefail
           semver="${KUBEATLAS_VERSION#v}"
