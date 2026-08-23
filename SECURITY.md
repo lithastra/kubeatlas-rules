@@ -2,9 +2,9 @@
 
 ## Supported versions
 
-KubeAtlas is in pre-alpha (Phase 0). No versions are formally supported
-for security updates yet. The project will define a support policy at
-v1.0 release.
+Only the latest released version of each KubeAtlas rule pack receives security
+fixes. A new release of a pack supersedes every older release; the project does
+not maintain parallel patch branches or backport fixes to older versions.
 
 ## Reporting a vulnerability
 
@@ -17,20 +17,25 @@ Email dev@lithastra.com with:
 - The affected version (commit SHA if pre-release)
 - Your proposed fix, if any
 
-We will acknowledge your report within 48 hours and provide a more
-detailed response within 5 business days indicating the next steps in
-handling your report.
+We will acknowledge a report within 7 calendar days. The acknowledgement will
+state the next update date. Resolution time depends on severity and complexity;
+we coordinate publication with the reporter instead of promising a fixed
+deadline before assessment.
 
 ## Scope
 
 In scope:
 
-- KubeAtlas server (the `kubeatlas` binary)
-- Helm Chart in this repository (when published)
-- Container images published to ghcr.io/lithastra/kubeatlas
+- Rego modules, metadata, samples, and validation tooling maintained in this
+  repository
+- OCI rule-pack artifacts published to `ghcr.io/lithastra/rules/*`
+- Signing, verification, release, and distribution configuration maintained in
+  this repository
 
 Out of scope:
 
-- Third-party dependencies (please report to the upstream project)
-- User misconfigurations (e.g., exposing the service to the public
-  internet without an authentication layer)
+- The KubeAtlas server, CLI, Helm Chart, and container images (report issues to
+  the main KubeAtlas repository)
+- Third-party dependencies and platforms (please report to the upstream
+  project)
+- User-authored rule packs and deployment misconfigurations
