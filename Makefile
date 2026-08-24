@@ -22,7 +22,10 @@ KUBEATLAS ?= kubeatlas
 # When PACK= is set the targets operate on a single directory; with
 # no PACK we walk every top-level dir that has a metadata.yaml.
 ifeq ($(PACK),)
-PACK_DIRS := $(shell find . -mindepth 2 -maxdepth 2 -name metadata.yaml -printf '%h\n' | sort)
+# GNU make's wildcard functions behave consistently on Linux and macOS.
+# Avoid GNU find-only flags such as -printf: BSD find rejects them and used to
+# leave PACK_DIRS empty while the targets still reported success.
+PACK_DIRS := $(patsubst %/metadata.yaml,%,$(wildcard */metadata.yaml))
 else
 PACK_DIRS := $(PACK)
 endif
@@ -41,7 +44,7 @@ OPA_IGNORE_FLAGS := --ignore '*.yaml' --ignore '*.yml'
 
 check: ## opa check: syntax + reference validation.
 	@if [ -z "$(PACK_DIRS)" ]; then \
-	  echo "no packs found"; exit 0; \
+	  echo "no packs found" >&2; exit 1; \
 	fi; \
 	for d in $(PACK_DIRS); do \
 	  echo "==> opa check $$d"; \
@@ -50,7 +53,7 @@ check: ## opa check: syntax + reference validation.
 
 test: ## opa test: per-pack unit tests under tests/.
 	@if [ -z "$(PACK_DIRS)" ]; then \
-	  echo "no packs found"; exit 0; \
+	  echo "no packs found" >&2; exit 1; \
 	fi; \
 	for d in $(PACK_DIRS); do \
 	  echo "==> opa test $$d"; \
@@ -59,7 +62,7 @@ test: ## opa test: per-pack unit tests under tests/.
 
 integration: ## kubeatlas rules-test: load + evaluate against samples/.
 	@if [ -z "$(PACK_DIRS)" ]; then \
-	  echo "no packs found"; exit 0; \
+	  echo "no packs found" >&2; exit 1; \
 	fi; \
 	for d in $(PACK_DIRS); do \
 	  if [ ! -d $$d/samples ]; then \
